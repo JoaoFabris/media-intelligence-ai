@@ -1,37 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Media Intelligence Dashboard
 
-## Getting Started
+Dashboard de monitoramento de cobertura midiática com análise de sentimento e chat RAG.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 16** — App Router, Server Components, Route Handlers
+- **Supabase** — PostgreSQL, Auth, Edge Functions
+- **Groq** — Análise de sentimento e chat (Llama 3)
+- **NewsAPI** — Coleta de artigos
+- **Recharts** — Visualização de dados
+- **Tailwind CSS** — Estilização
+
+## Arquitetura
+
+```
+Browser → Next.js (proxy.ts) → Supabase Auth
+                ↓
+         API Routes (trigger)
+                ↓
+      Supabase Edge Functions (Deno)
+                ↓
+         NewsAPI → Groq → PostgreSQL
+                ↓
+         Dashboard + Chat RAG (streaming SSE)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Funcionalidades
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Coleta** — busca artigos por keyword via NewsAPI com match no título
+- **Análise** — sentimento (positivo/neutro/negativo), score e resumo via Groq
+- **Dashboard** — gráfico de tendência de sentimento + lista de artigos
+- **Chat RAG** — perguntas em linguagem natural respondidas com contexto real dos artigos
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Segurança
 
-## Learn More
+- RLS ativo em todas as tabelas
+- Nenhuma API key exposta ao browser
+- `getClaims()` para validação JWT no servidor
+- Três camadas de segurança: proxy → Server Components → RLS
 
-To learn more about Next.js, take a look at the following resources:
+## Rodando localmente
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Pré-requisitos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 20+
+- pnpm
+- Supabase CLI
+- Conta no [Supabase](https://supabase.com)
+- Conta no [NewsAPI](https://newsapi.org)
+- Conta no [Groq](https://console.groq.com)
 
-## Deploy on Vercel
+### Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# 1. Clone o repositório
+git clone https://github.com/seu-usuario/media-intelligence
+cd media-intelligence
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# media-intelligence-ai
+# 2. Instale as dependências
+pnpm install
+
+# 3. Configure as variáveis de ambiente
+cp .env.example .env.local
+# edite o .env.local com suas keys
+
+# 4. Configure o banco de dados
+# Execute o SQL em supabase/migrations/schema.sql no SQL Editor do Supabase
+
+# 5. Configure as secrets da Edge Function
+supabase login
+supabase link
+supabase secrets set NEWSAPI_KEY=sua_key
+supabase secrets set GROQ_API_KEY=sua_key
+
+# 6. Deploy da Edge Function
+supabase functions deploy ingest-and-analyze
+
+# 7. Rode o projeto
+pnpm dev
+```
+
+### Variáveis de ambiente
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+NEWSAPI_KEY=...
+GROQ_API_KEY=...
+```
+
+## Deploy
+
+O projeto está configurado para deploy na Vercel. Conecte o repositório e configure as variáveis de ambiente no painel da Vercel.
